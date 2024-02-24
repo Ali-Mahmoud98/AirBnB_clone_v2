@@ -2,6 +2,7 @@
 """ Console Module """
 import cmd
 import sys
+import shlex
 from models.base_model import BaseModel
 from models.__init__ import storage
 from models.user import User
@@ -115,24 +116,35 @@ class HBNBCommand(cmd.Cmd):
 
     def do_create(self, args):
         """ Create an object of any class"""
-        try:
-            if not args:
-                raise SyntaxError()
-            arg_list = args.split(" ")
-            kw = {}
-            for arg in arg_list[1:]:
-                arg_splited = arg.split("=")
-                arg_splited[1] = eval(arg_splited[1])
-                if type(arg_splited[1]) is str:
-                    arg_splited[1] = arg_splited[1].replace("_", " ").replace('"', '\\"')
-                kw[arg_splited[0]] = arg_splited[1]
-        except SyntaxError:
+        if len(args) == 0:
             print("** class name missing **")
-        except NameError:
+            return
+        try:
+            args_list = shlex.split(args)
+            # ['State', 'name=California']
+            new_dict = {}
+            for elem in args_list[1:]:
+                new_arg = elem.split("=")
+                # ['name', 'California']
+                new_dict[new_arg[0]] = new_arg[1]
+                # new_dict[name] = 'California'
+
+            new_instance = HBNBCommand.classes[args_list[0]]()
+            for key, value in new_dict.items():
+                if "_" in value:
+                    value = value.replace("_", " ")
+                else:
+                    try:
+                        value = eval(value)
+                    except BaseException:
+                        pass
+
+                if hasattr(new_instance, key):
+                    setattr(new_instance, key, value)
+            print(new_instance.id)
+            new_instance.save()
+        except Exception as e:
             print("** class doesn't exist **")
-        new_instance = HBNBCommand.classes[arg_list[0]](**kw)
-        new_instance.save()
-        print(new_instance.id)
 
     def help_create(self):
         """ Help information for the create method """
